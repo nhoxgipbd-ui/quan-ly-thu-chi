@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sổ Thu Chi & Vật Tư - Cơ Điện Lạnh Thanh Tâm Hiếu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 p-3 md:p-6">
+    <div class="max-w-6xl mx-auto space-y-5">
+        
+        <!-- Header có Logo & Tên Thương Hiệu -->
+        <header class="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex items-center gap-3.5">
+                <!-- Logo vẽ trực tiếp chuẩn SVG thương hiệu Thanh Tâm Hiếu -->
+                <div class="bg-white p-1.5 rounded-xl flex items-center justify-center shrink-0 w-14 h-14 shadow">
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <path d="M 15,15 L 85,15 C 85,15 85,60 50,90 C 15,60 15,15 15,15 Z" fill="none" stroke="#1e40af" stroke-width="6" stroke-linejoin="round"/>
+                        <path d="M 25,25 L 75,25 M 50,25 L 50,80 M 35,40 L 35,65 M 65,40 L 65,65 M 35,50 L 65,50" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-2xl font-bold uppercase tracking-wide text-blue-400">Cơ Điện Lạnh Thanh Tâm Hiếu</h1>
+                    <p class="text-xs text-slate-300 mt-0.5">Hệ thống quản lý dòng tiền, ăn uống & vật tư công trình</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 w-full md:w-auto justify-end">
+                <button onclick="openCategoryModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                    ⚙️ Quản Lý Danh Mục
+                </button>
+                <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold transition">Xuất Excel</button>
+                <button onclick="clearAllData()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg text-xs font-semibold transition">Xóa Dữ Liệu</button>
+            </div>
+        </header>
+
+        <!-- Thẻ KPI Thống Kê Tổng Quan -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                <p class="text-[11px] font-bold text-slate-400 uppercase">Tổng Thu Nhập</p>
+                <h2 id="kpiIncome" class="text-base sm:text-lg font-extrabold text-emerald-600 mt-1">0 VNĐ</h2>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-rose-500">
+                <p class="text-[11px] font-bold text-slate-400 uppercase">Chi Ăn Uống & Sinh Hoạt</p>
+                <h2 id="kpiPersonal" class="text-base sm:text-lg font-extrabold text-rose-600 mt-1">0 VNĐ</h2>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-amber-500">
+                <p class="text-[11px] font-bold text-slate-400 uppercase">Chi Vật Tư Công Trình</p>
+                <h2 id="kpiProject" class="text-base sm:text-lg font-extrabold text-amber-600 mt-1">0 VNĐ</h2>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <p class="text-[11px] font-bold text-slate-400 uppercase">Số Dư Hiện Tại</p>
+                <h2 id="kpiBalance" class="text-base sm:text-lg font-extrabold text-blue-900 mt-1">0 VNĐ</h2>
+            </div>
+        </div>
+
+        <!-- Khung Nhập Liệu & Phím Tắt -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            
+            <!-- Form Nhập Khoản Chi -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm space-y-4">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="text-base font-bold text-slate-900">Ghi Nhận Khoản Chi / Thu</h3>
+                    <button type="button" onclick="openCategoryModal()" class="text-xs text-blue-600 hover:underline font-medium">⚙️ Chỉnh danh mục</button>
+                </div>
+
+                <!-- Phím Chọn Nhanh Cho Ăn Uống -->
+                <div>
+                    <span class="text-xs font-semibold text-slate-500 block mb-1.5">Chọn Nhanh Loại Ăn Uống / Sinh Hoạt:</span>
+                    <div class="flex flex-wrap gap-1.5" id="quickButtons">
+                        <!-- Nút bấm nhanh sinh tự động dựa trên danh mục -->
+                    </div>
+                </div>
+
+                <form id="txForm" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Loại Thu / Chi</label>
+                        <select id="type" onchange="toggleProjectField()" class="w-full border border-slate-200 p-2 rounded-lg text-sm font-medium focus:outline-blue-500">
+                            <option value="expense_personal">Chi Ăn Uống & Sinh Hoạt Cá Nhân</option>
+                            <option value="expense_project">Chi Vật Tư & Công Trình</option>
+                            <option value="income">Thu Nhập / Tạm Ứng / Tiền Công</option>
+                        </select>
+                    </div>
+
+                    <div id="projectGroup" class="hidden">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tên Công Trình / Dự Án</label>
+                        <input type="text" id="projectName" placeholder="VD: Công trình Biệt thự Biên Hòa" class="w-full border border-slate-200 p-2 rounded-lg text-sm focus:outline-blue-500">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Ngày</label>
+                            <input type="date" id="date" class="w-full border border-slate-200 p-2 rounded-lg text-sm focus:outline-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Danh Mục</label>
+                            <select id="category" class="w-full border border-slate-200 p-2 rounded-lg text-sm focus:outline-blue-500">
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Số Tiền (VNĐ)</label>
+                        <input type="number" id="amount" placeholder="VD: 50000" class="w-full border border-slate-200 p-2 rounded-lg text-sm font-bold text-slate-900 focus:outline-blue-500" min="1" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Ghi Chú Chi Tiết</label>
+                        <input type="text" id="note" placeholder="VD: Cơm trưa thợ, Cà phê sáng..." class="w-full border border-slate-200 p-2 rounded-lg text-sm focus:outline-blue-500">
+                    </div>
+
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow">Lưu Khoản Chi / Thu</button>
+                </form>
+            </div>
+
+            <!-- Biểu Đồ Thống Kê -->
+            <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase mb-2">So Sánh Dòng Tiền</h3>
+                    <div class="relative h-56 w-full"><canvas id="barChart"></canvas></div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase mb-2">Phân Bổ Chi Tiêu</h3>
+                    <div class="relative h-56 w-full"><canvas id="donutChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng Nhật Ký Chi Tiết -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm space-y-3">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h3 class="text-base font-bold text-slate-900">Nhật Ký Chi Tiêu</h3>
+                <select id="filterType" onchange="renderUI()" class="border border-slate-200 text-xs p-2 rounded-lg">
+                    <option value="all">Tất cả khoản thu chi</option>
+                    <option value="expense_personal">Chỉ xem Ăn Uống & Sinh Hoạt</option>
+                    <option value="expense_project">Chỉ xem Vật Tư Công Trình</option>
+                    <option value="income">Chỉ xem Thu Nhập</option>
+                </select>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs sm:text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[11px]">
+                        <tr>
+                            <th class="p-2.5">Ngày</th>
+                            <th class="p-2.5">Loại</th>
+                            <th class="p-2.5">Danh Mục</th>
+                            <th class="p-2.5">Công Trình / Ghi Chú</th>
+                            <th class="p-2.5 text-right">Số Tiền</th>
+                            <th class="p-2.5 text-center">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable" class="divide-y divide-slate-100">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL QUẢN LÝ DANH MỤC -->
+    <div id="categoryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-base font-bold text-slate-900">Quản Lý Loại Thu / Chi & Danh Mục</h3>
+                <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+
+            <!-- Thêm Danh Mục Mới -->
+            <div class="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <span class="text-xs font-bold text-slate-700 block">Thêm Danh Mục Mới:</span>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <select id="modalTypeSelect" class="border border-slate-200 p-2 rounded-lg text-xs font-medium">
+                        <option value="expense_personal">Ăn uống & Cá nhân</option>
+                        <option value="expense_project">Vật tư & Công trình</option>
+                        <option value="income">Thu nhập</option>
+                    </select>
+                    <input type="text" id="newCategoryInput" placeholder="Tên danh mục mới..." class="border border-slate-200 p-2 rounded-lg text-xs col-span-2">
+                </div>
+                <button onclick="addCategory()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">
+                    + Thêm Danh Mục
+                </button>
+            </div>
+
+            <!-- Danh Sách Danh Mục Hiện Có -->
+            <div class="space-y-3 max-h-60 overflow-y-auto pr-1" id="categoryListContainer">
+                <!-- Javascript sẽ render danh sách danh mục kèm nút sửa/xóa tại đây -->
+            </div>
+
+            <div class="text-right pt-2 border-t">
+                <button onclick="closeCategoryModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-4 py-2 rounded-lg text-xs">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Danh mục mặc định
+        const defaultCategories = {
+            expense_personal: ['Ăn sáng / Ăn trưa / Ăn tối', 'Cà phê / Nước uống', 'Đi chợ / Siêu thị', 'Nhà ở & Điện nước', 'Xe cộ & Xăng xe', 'Chi phí khác'],
+            expense_project: ['Vật tư điện lạnh / Ống đồng', 'Thiết bị & Máy móc', 'Vận chuyển & Lắp đặt', 'Nhân công / Thợ', 'Vật tư phụ', 'Chi phí dự án khác'],
+            income: ['Thanh toán công trình', 'Tạm ứng công trình', 'Lương / Thưởng', 'Thu nhập khác']
+        };
+
+        let categoriesMap = JSON.parse(localStorage.getItem('thanhtamhieu_categories')) || defaultCategories;
+
+        let transactions = JSON.parse(localStorage.getItem('thanhtamhieu_expenses')) || [
+            { id: 1, date: '2026-08-28', type: 'income', projectName: 'Công trình Biệt thự Biên Hòa', category: 'Tạm ứng công trình', amount: 30000000, note: 'Tạm ứng đợt 1' },
+            { id: 2, date: '2026-08-29', type: 'expense_personal', projectName: '', category: 'Ăn sáng / Ăn trưa / Ăn tối', amount: 55000, note: 'Bún bò sáng' },
+            { id: 3, date: '2026-08-29', type: 'expense_personal', projectName: '', category: 'Cà phê / Nước uống', amount: 30000, note: 'Cà phê muối' },
+            { id: 4, date: '2026-08-29', type: 'expense_project', projectName: 'Công trình Biệt thự Biên Hòa', category: 'Vật tư điện lạnh / Ống đồng', amount: 4500000, note: 'Mua ống đồng Toàn Phát' }
+        ];
+
+        let barChart = null, donutChart = null;
+        document.getElementById('date').valueAsDate = new Date();
+
+        function saveCategories() {
+            localStorage.setItem('thanhtamhieu_categories', JSON.stringify(categoriesMap));
+            toggleProjectField();
+            renderQuickButtons();
+        }
+
+        function toggleProjectField() {
+            const type = document.getElementById('type').value;
+            const projectGroup = document.getElementById('projectGroup');
+            const categorySelect = document.getElementById('category');
+
+            if (type === 'expense_project' || type === 'income') {
+                projectGroup.classList.remove('hidden');
+            } else {
+                projectGroup.classList.add('hidden');
+            }
+
+            categorySelect.innerHTML = '';
+            (categoriesMap[type] || []).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.innerText = cat;
+                categorySelect.appendChild(opt);
+            });
+        }
+
+        function renderQuickButtons() {
+            const container = document.getElementById('quickButtons');
+            container.innerHTML = '';
+            const personalCats = categoriesMap.expense_personal || [];
+            
+            personalCats.slice(0, 4).forEach(cat => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-rose-200 transition';
+                btn.innerText = cat;
+                btn.onclick = () => quickSelect('expense_personal', cat);
+                container.appendChild(btn);
+            });
+        }
+
+        function quickSelect(type, category) {
+            document.getElementById('type').value = type;
+            toggleProjectField();
+            document.getElementById('category').value = category;
+            document.getElementById('amount').focus();
+        }
+
+        /* KHU VỰC QUẢN LÝ MODAL DANH MỤC */
+        function openCategoryModal() {
+            renderCategoryListInModal();
+            document.getElementById('categoryModal').classList.remove('hidden');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.add('hidden');
+        }
+
+        function renderCategoryListInModal() {
+            const container = document.getElementById('categoryListContainer');
+            container.innerHTML = '';
+
+            const typeLabels = {
+                expense_personal: 'Ăn uống & Cá nhân',
+                expense_project: 'Vật tư & Công trình',
+                income: 'Thu nhập'
+            };
+
+            for (const [typeKey, catList] of Object.entries(categoriesMap)) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = "space-y-1";
+                
+                let html = `<span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mt-2">${typeLabels[typeKey]}</span>`;
+                
+                catList.forEach((catName, index) => {
+                    html += `
+                        <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg text-xs border border-slate-100">
+                            <span class="font-medium text-slate-800">${catName}</span>
+                            <div class="flex gap-2">
+                                <button onclick="editCategory('${typeKey}', ${index})" class="text-blue-600 hover:underline">Sửa</button>
+                                <button onclick="deleteCategory('${typeKey}', ${index})" class="text-rose-600 hover:underline">Xóa</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                groupDiv.innerHTML = html;
+                container.appendChild(groupDiv);
+            }
+        }
+
+        function addCategory() {
+            const type = document.getElementById('modalTypeSelect').value;
+            const input = document.getElementById('newCategoryInput');
+            const newCat = input.value.trim();
+
+            if (!newCat) {
+                alert('Vui lòng nhập tên danh mục!');
+                return;
+            }
+
+            if (categoriesMap[type].includes(newCat)) {
+                alert('Danh mục này đã tồn tại!');
+                return;
+            }
+
+            categoriesMap[type].push(newCat);
+            input.value = '';
+            saveCategories();
+            renderCategoryListInModal();
+        }
+
+        function editCategory(typeKey, index) {
+            const oldName = categoriesMap[typeKey][index];
+            const newName = prompt('Nhập tên danh mục mới:', oldName);
+            
+            if (newName && newName.trim() !== '') {
+                categoriesMap[typeKey][index] = newName.trim();
+                saveCategories();
+                renderCategoryListInModal();
+            }
+        }
+
+        function deleteCategory(typeKey, index) {
+            if (categoriesMap[typeKey].length <= 1) {
+                alert('Mỗi loại phải giữ lại ít nhất 1 danh mục!');
+                return;
+            }
+            if (confirm(`Bạn có chắc muốn xóa danh mục "${categoriesMap[typeKey][index]}"?`)) {
+                categoriesMap[typeKey].splice(index, 1);
+                saveCategories();
+                renderCategoryListInModal();
+            }
+        }
+
+        /* QUẢN LÝ GIAO DIỆN & BẢNG NHẬT KÝ */
+        function renderUI() {
+            localStorage.setItem('thanhtamhieu_expenses', JSON.stringify(transactions));
+            
+            const filterType = document.getElementById('filterType').value;
+            let totalInc = 0, totalProjExp = 0, totalPersExp = 0;
+            const catExpTotals = {};
+
+            const tableBody = document.getElementById('historyTable');
+            tableBody.innerHTML = '';
+
+            const filteredData = transactions.filter(t => filterType === 'all' || t.type === filterType);
+
+            transactions.forEach(tx => {
+                if (tx.type === 'income') totalInc += tx.amount;
+                if (tx.type === 'expense_project') {
+                    totalProjExp += tx.amount;
+                    catExpTotals[tx.category] = (catExpTotals[tx.category] || 0) + tx.amount;
+                }
+                if (tx.type === 'expense_personal') {
+                    totalPersExp += tx.amount;
+                    catExpTotals[tx.category] = (catExpTotals[tx.category] || 0) + tx.amount;
+                }
+            });
+
+            filteredData.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(tx => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-50";
+                
+                let badge = '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-semibold">Thu</span>';
+                if (tx.type === 'expense_project') badge = '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[11px] font-semibold">Công trình</span>';
+                if (tx.type === 'expense_personal') badge = '<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded text-[11px] font-semibold">Ăn uống/Cá nhân</span>';
+
+                const noteText = [tx.projectName, tx.note].filter(Boolean).join(' - ') || '-';
+
+                row.innerHTML = `
+                    <td class="p-2.5 font-medium">${tx.date}</td>
+                    <td class="p-2.5">${badge}</td>
+                    <td class="p-2.5 font-medium text-slate-800">${tx.category}</td>
+                    <td class="p-2.5 text-slate-500">${noteText}</td>
+                    <td class="p-2.5 text-right font-bold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}">
+                        ${tx.type === 'income' ? '+' : '-'}${tx.amount.toLocaleString('vi-VN')} đ
+                    </td>
+                    <td class="p-2.5 text-center">
+                        <button onclick="deleteTx(${tx.id})" class="text-xs text-rose-500 hover:underline">Xóa</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            document.getElementById('kpiIncome').innerText = totalInc.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('kpiProject').innerText = totalProjExp.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('kpiPersonal').innerText = totalPersExp.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('kpiBalance').innerText = (totalInc - (totalProjExp + totalPersExp)).toLocaleString('vi-VN') + ' đ';
+
+            updateCharts(totalInc, totalProjExp, totalPersExp, catExpTotals);
+        }
+
+        function updateCharts(inc, projExp, persExp, catData) {
+            if (barChart) barChart.destroy();
+            barChart = new Chart(document.getElementById('barChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Thu Nhập', 'Vật Tư CT', 'Ăn Uống/Cá Nhân'],
+                    datasets: [{
+                        data: [inc, projExp, persExp],
+                        backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'],
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            if (donutChart) donutChart.destroy();
+            donutChart = new Chart(document.getElementById('donutChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(catData),
+                    datasets: [{
+                        data: Object.values(catData),
+                        backgroundColor: ['#f43f5e', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#64748b']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        document.getElementById('txForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newTx = {
+                id: Date.now(),
+                type: document.getElementById('type').value,
+                projectName: document.getElementById('projectName').value,
+                date: document.getElementById('date').value,
+                category: document.getElementById('category').value,
+                amount: Number(document.getElementById('amount').value),
+                note: document.getElementById('note').value
+            };
+
+            transactions.push(newTx);
+            document.getElementById('amount').value = '';
+            document.getElementById('note').value = '';
+            document.getElementById('projectName').value = '';
+            renderUI();
+        });
+
+        function deleteTx(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            renderUI();
+        }
+
+        function clearAllData() {
+            if (confirm('Bạn có chắc chắn muốn xóa tất cả dữ liệu thu chi?')) {
+                transactions = [];
+                renderUI();
+            }
+        }
+
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "ID,Ngay,Loai,Ten Cong Trinh,Danh Muc,So Tien,Ghi Chu\n";
+
+            transactions.forEach(t => {
+                csvContent += `${t.id},${t.date},${t.type},"${t.projectName || ''}","${t.category}",${t.amount},"${t.note || ''}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `ThanhTamHieu_SoThuChi_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Khởi chạy
+        toggleProjectField();
+        renderQuickButtons();
+        renderUI();
+    </script>
+</body>
+</html>
